@@ -1,9 +1,9 @@
 function dashedLine(x1, y1, x2, y2, l, g) {
     let pc = dist(x1, y1, x2, y2) / 100;
     let pcCount = 1;
-    let lPercent = gPercent = 0;
+    let lPercent;
     let currentPos = 0;
-    let xx1 = yy1 = xx2 = yy2 = 0;
+    let xx1, xx2, yy1, yy2;
 
     while (int(pcCount * pc) < l) {
         pcCount++
@@ -13,7 +13,7 @@ function dashedLine(x1, y1, x2, y2, l, g) {
     while (int(pcCount * pc) < g) {
         pcCount++
     }
-    gPercent = pcCount;
+    let gPercent = pcCount;
 
     lPercent = lPercent / 100;
     gPercent = gPercent / 100;

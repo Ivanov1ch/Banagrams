@@ -10,12 +10,14 @@ function preload() {
 function setup() {
     createCanvas(900, 900);
     bunch.setupTiles(lettersJSON);
+
+    grid.tiles[0][0].setTile(bunch.tiles[0]);
+    grid.tiles[0][1].setTile(bunch.tiles[1]);
 }
 
 function draw() {
     background(0);
     grid.show();
-    bunch.tiles[0].show();
 }
 
 function mousePressed() {

@@ -9,6 +9,11 @@ class Tile {
         this.height = 50;
         this.isBeingDragged = false;
         this.isHovered = false;
+
+        this.grid = null;
+
+        // The GridTile that currently has this Tile as its containedTile
+        this.gridTileLocation = null;
     }
 
     setCoordinates(x, y) {
@@ -66,6 +71,10 @@ class Tile {
                 this.y = 900 - this.height;
             else if(this.y < 0)
                 this.y = 0;
+
+            let centerX = this.x + this.width / 2, centerY = this.y + this.height / 2;
+
+            grid.boldTile(centerX, centerY);
         }
     }
 
@@ -77,10 +86,16 @@ class Tile {
             // Keep track of relative location of the click to the corner of rectangle
             this.offsetX = this.x - mouseX;
             this.offsetY = this.y - mouseY;
+
+            // Make sure the parent tile knows its child is moving
+            this.gridTileLocation.containedTileIsBeingMoved = true;
         }
     }
 
     released() {
         this.isBeingDragged = false;
+        this.gridTileLocation.containedTileIsBeingMoved = false;
+
+        grid.dropTile(this);
     }
 }
