@@ -1,0 +1,23 @@
+{
+  "name": "bananagrams",
+  "version": "1.0.0",
+  "description": "An online, multiplayer version of the world's best boardless Scrabble game",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Ivanov1ch/Banagrams.git"
+  },
+  "author": "Ivanov1ch (Daniel Ivanovich)",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Ivanov1ch/Banagrams/issues"
+  },
+  "homepage": "https://github.com/Ivanov1ch/Banagrams#readme",
+  "dependencies": {
+    "express": "^4.17.1",
+    "socket.io": "^2.3.0"
+  }
+}
