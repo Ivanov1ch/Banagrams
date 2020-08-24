@@ -1,4 +1,4 @@
-let gameDataJSON, scrollUpInterval, scrollDownInterval, scrollLeftInterval, scrollRightInterval;
+let gameDataJSON, dictionary, scrollUpInterval, scrollDownInterval, scrollLeftInterval, scrollRightInterval;
 let tileScrollUpInterval, tileScrollDownInterval, tileScrollLeftInterval, tileScrollRightInterval;
 let isValidatingCrossword = false; // When this is true, input will be disabled so the crossword doesn't change
 const canvasWidth = 900, canvasHeight = 900, tileWidth = 50, tileHeight = 50, gridMargin = 5, numRows = 50,
@@ -11,8 +11,24 @@ const numPlayers = 4, playerOrder = 1;
 
 function preload() {
     let currentURL = getURL();
-    let jsonURL = currentURL.slice(0, currentURL.lastIndexOf('/') + 1) + 'game_data.json';
+    let URLStem = currentURL.slice(0, currentURL.lastIndexOf('/') + 1);
+    let jsonURL = URLStem + 'data/game_data.json';
+    let dictionaryURL = URLStem + 'data/Dictionary.txt';
     gameDataJSON = loadJSON(jsonURL);
+
+    let request = new XMLHttpRequest();
+    request.open('GET', dictionaryURL, true);
+    request.send(null);
+    request.onreadystatechange = function () {
+        if (request.readyState === 4 && request.status === 200) {
+            let type = request.getResponseHeader('Content-Type');
+            if (type.indexOf("text") !== 1) {
+                dictionary = request.responseText.trim().split("\n");
+                for(let i = 0; i < dictionary.length; i++)
+                    dictionary[i] = dictionary[i].replace(/\W/g, '');
+            }
+        }
+    }
 }
 
 function setup() {
@@ -137,4 +153,43 @@ function startGame() {
             grid.tiles[col][row].setTile(startingTiles[tileIndex]);
             tileIndex++;
         }
+}
+
+function validateBoard() {
+    if (dictionary !== undefined) {
+        let words = findAllWords(grid);
+
+        if (words == null)
+            return false;
+
+        // Binary search each word's text in the array
+        for (let i = 0; i < words.length; i++) {
+            let word = words[i], wordText = word.text;
+
+            if(binarySearch(wordText) === -1)
+                return false;
+        }
+
+        return true;
+    }
+
+    return false;
+}
+
+// Returns the index of the word in the Dictionary if it is in the dictionary, otherwise returns -1
+function binarySearch(word) {
+    let low = 0, high = dictionary.length - 1, mid = Math.floor((high + low) / 2);
+
+    while (dictionary[mid] !== word && low < high) {
+        let comparison = word.localeCompare(dictionary[mid]);
+
+        if (comparison < 0)
+            high = mid - 1;
+        else
+            low = mid + 1;
+
+        mid = Math.floor((high + low) / 2);
+    }
+
+    return (dictionary[mid] === word) ? mid : -1;
 }
