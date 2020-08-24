@@ -7,6 +7,7 @@ class Tile {
         this.offsetY = 0;
         this.width = 50;
         this.height = 50;
+
         this.isBeingDragged = false;
         this.isHovered = false;
 
@@ -48,33 +49,39 @@ class Tile {
     checkHover() {
         this.isHovered = false;
 
-        // Is the X inside the box?
-        if (mouseX > this.x && mouseX < this.x + this.width)
-            // Is the Y inside the box?
-            if (mouseY > this.y && mouseY < this.y + this.height)
-                this.isHovered = true;
+        // These calculations have to include the current translation of the grid because mouse coordinates do not change
+        // as the coordinate system is transformed, but the coordinates of items on that system (such as this tile) do.
 
+        // Is the X inside the box?
+        if (mouseX - this.grid.translateX > this.x && mouseX - this.grid.translateX < this.x + this.width)
+            // Is the Y inside the box?
+            if (mouseY - this.grid.translateY > this.y && mouseY - this.grid.translateY < this.y + this.height)
+                this.isHovered = true;
     }
 
     updateCoords() {
-        if(this.isBeingDragged) {
+        if (this.isBeingDragged) {
             this.x = mouseX + this.offsetX;
             this.y = mouseY + this.offsetY;
 
-            // Don't let items be dragged out of Bounds
-            if(this.x + this.width > 900)
-                this.x = 900 - this.width;
-            else if (this.x < 0)
-                this.x = 0;
+            // Don't let items be dragged out of bounds
+            let rightBoundaryX = 900 - this.grid.translateX, leftBoundaryX = -this.grid.translateX;
+            let upperBoundaryY = -this.grid.translateY, lowerBoundaryY = 900 - this.grid.translateY;
 
-            if(this.y + this.height > 900)
-                this.y = 900 - this.height;
-            else if(this.y < 0)
-                this.y = 0;
+            if (this.x > rightBoundaryX - this.width)
+                this.x = rightBoundaryX - this.width;
+            else if (this.x < leftBoundaryX)
+                this.x = leftBoundaryX;
+
+
+            if (this.y > lowerBoundaryY - this.height)
+                this.y = lowerBoundaryY - this.height;
+            else if (this.y < upperBoundaryY)
+                this.y = upperBoundaryY;
 
             let centerX = this.x + this.width / 2, centerY = this.y + this.height / 2;
 
-            grid.boldTile(centerX, centerY);
+            this.grid.boldTile(centerX, centerY);
         }
     }
 
@@ -96,6 +103,6 @@ class Tile {
         this.isBeingDragged = false;
         this.gridTileLocation.containedTileIsBeingMoved = false;
 
-        grid.dropTile(this);
+        this.grid.dropTile(this);
     }
 }
