@@ -1,5 +1,6 @@
 let gameDataJSON, scrollUpInterval, scrollDownInterval, scrollLeftInterval, scrollRightInterval;
 let tileScrollUpInterval, tileScrollDownInterval, tileScrollLeftInterval, tileScrollRightInterval;
+let isValidatingCrossword = false; // When this is true, input will be disabled so the crossword doesn't change
 const canvasWidth = 900, canvasHeight = 900, tileWidth = 50, tileHeight = 50, gridMargin = 5, numRows = 50,
     numCols = 50, scrollLoopDelay = 125;
 const bunch = new Bunch(654321),
@@ -44,20 +45,22 @@ function keyPressed() {
             scrollRightInterval = setInterval(() => grid.scrollRight(), scrollLoopDelay);
         }
 
-        // There needs to be tiles on the grid to move in the first place
-        if (grid.occupiedTiles.length !== 0) {
-            if (keyCode === LEFT_ARROW && tileScrollLeftInterval == null) {
-                grid.scrollTilesLeft();
-                tileScrollLeftInterval = setInterval(() => grid.scrollTilesLeft(), scrollLoopDelay);
-            } else if (keyCode === RIGHT_ARROW && tileScrollRightInterval == null) {
-                grid.scrollTilesRight();
-                tileScrollRightInterval = setInterval(() => grid.scrollTilesRight(), scrollLoopDelay);
-            } else if (keyCode === UP_ARROW) {
-                grid.scrollTilesUp();
-                tileScrollUpInterval = setInterval(() => grid.scrollTilesUp(), scrollLoopDelay);
-            } else if (keyCode === DOWN_ARROW) {
-                grid.scrollTilesDown();
-                tileScrollDownInterval = setInterval(() => grid.scrollTilesDown(), scrollLoopDelay);
+        if (!isValidatingCrossword) {
+            // There needs to be tiles on the grid to move in the first place
+            if (grid.occupiedTiles.length !== 0) {
+                if (keyCode === LEFT_ARROW && tileScrollLeftInterval == null) {
+                    grid.scrollTilesLeft();
+                    tileScrollLeftInterval = setInterval(() => grid.scrollTilesLeft(), scrollLoopDelay);
+                } else if (keyCode === RIGHT_ARROW && tileScrollRightInterval == null) {
+                    grid.scrollTilesRight();
+                    tileScrollRightInterval = setInterval(() => grid.scrollTilesRight(), scrollLoopDelay);
+                } else if (keyCode === UP_ARROW) {
+                    grid.scrollTilesUp();
+                    tileScrollUpInterval = setInterval(() => grid.scrollTilesUp(), scrollLoopDelay);
+                } else if (keyCode === DOWN_ARROW) {
+                    grid.scrollTilesDown();
+                    tileScrollDownInterval = setInterval(() => grid.scrollTilesDown(), scrollLoopDelay);
+                }
             }
         }
 
@@ -97,7 +100,8 @@ function keyReleased() {
 }
 
 function mousePressed() {
-    grid.checkPressed();
+    if (!isValidatingCrossword)
+        grid.checkPressed();
 }
 
 function mouseReleased() {
@@ -133,5 +137,4 @@ function startGame() {
             grid.tiles[col][row].setTile(startingTiles[tileIndex]);
             tileIndex++;
         }
-
 }
