@@ -92,7 +92,7 @@ class Grid {
 
         if (!gridTile.occupied) {
             tile.gridTileLocation.clearTile();
-            gridTile.setTile(tile);
+            gridTile.setTile(tile, true);
         }
     }
 
@@ -289,6 +289,117 @@ class Grid {
 
     }
 
+    // Places a tile in the first open space it can find that has at least one blank space between it and all other tiles
+    addTile(tile) {
+        let tempTiles = [...this.occupiedTiles];
+
+        // Sort tempTiles so that tiles that are currently visible are searched around first, with those currently
+        // roughly in the middle of the screen taking highest priority
+        let smallestRowVisible = (-this.translateX / this.tileWidth) - 1;
+        let largestRowVisible = (this.width / this.tileWidth) + smallestRowVisible;
+        let smallestColVisible = (-this.translateY / this.tileHeight) - 1;
+        let largestColVisible = (this.height / this.tileHeight) + smallestColVisible;
+
+        tempTiles.sort((a, b) => {
+            if (b.row >= smallestRowVisible && b.row <= largestRowVisible) {
+                if (a.row >= smallestRowVisible && a.row <= largestRowVisible) {
+                    if (b.col >= smallestColVisible && b.col <= largestColVisible) {
+                        if (a.col >= smallestColVisible && a.col <= largestColVisible) {
+                            // Both are fully visible, break the tie by seeing which is closer to the center vertically, then horizontally
+                            let middleCol = Math.floor((smallestColVisible + largestColVisible) / 2);
+                            let diffA = Math.abs(a.col - middleCol), diffB = Math.abs(b.col - middleCol);
+
+                            if (diffA === diffB) {
+                                // Settle the tie horizontally
+                                let middleRow = Math.floor((smallestRowVisible + largestRowVisible) / 2);
+                                diffA = Math.abs(a.row - middleRow);
+                                diffB = Math.abs(b.row - middleRow);
+
+                                return diffA - diffB;
+                            } else {
+                                return diffA - diffB;
+                            }
+                        } else {
+                            return -1;
+                        }
+                    } else {
+                        // B's col is out of range
+                        if (a.col >= smallestColVisible && a.col <= largestColVisible) {
+                            return 1;
+                        } else {
+                            // Both cols out of range, just subtract them at this point
+                            return a.col - b.col;
+                        }
+                    }
+                } else {
+                    return -1;
+                }
+            } else {
+                // B's row is out of range
+                if (a.row >= smallestRowVisible && a.row <= largestRowVisible) {
+                    return 1;
+                } else {
+                    // Both rows out of range, just subtract them at this point
+                    return a.row - b.row;
+                }
+            }
+        });
+
+        let visited = [];
+
+        for (let i = 0; i < tempTiles.length; i++)
+            visited.push(false);
+
+        let finalLocation = null;
+
+        for (let i = 0; i < tempTiles.length; i++) {
+            let thisTile = tempTiles[i], row = thisTile.row, col = thisTile.col;
+
+            // Check all locations 2 tiles away from this tile
+            for (let r = row - 2; r <= row + 2; r += 2) {
+                for (let c = col - 2; c <= col + 2; c += 2) {
+                    let potentialLocation = this.tiles[r][c];
+                    let validLocation = true;
+                    // Check if there is a 1-block empty circle around potentialLocation
+                    for (let r2 = r - 1; r2 <= r + 1; r2++) {
+                        for (let c2 = c - 1; c2 <= c + 1; c2++) {
+                            if (this.tiles[r2][c2].occupied)
+                                validLocation = false;
+                        }
+                    }
+
+                    if (validLocation) {
+                        finalLocation = potentialLocation;
+                        break;
+                    }
+                }
+
+                if (finalLocation != null)
+                    break;
+            }
+
+
+        }
+
+        // setTile() and make sure the new tile is visible by adjusting the boundaries
+        if (finalLocation != null) {
+            finalLocation.setTile(tile);
+            let row = finalLocation.row, col = finalLocation.col;
+            if (row < smallestRowVisible) {
+                this.translateX = -row * this.tileWidth;
+            } else if (row > largestRowVisible) {
+                this.translateX = -((row + 1) * this.tileWidth - this.width);
+            }
+
+            if (col < smallestColVisible) {
+                this.translateY = -col * this.tileHeight;
+            } else if (col > largestColVisible) {
+                console.log("Yo");
+                this.translateY = -((col + 1) * this.tileHeight - this.height);
+            }
+        }
+    }
+
 }
 
 class GridTile {
@@ -308,8 +419,7 @@ class GridTile {
         this.debug = false;
     }
 
-    setTile(tile) {
-
+    setTile(tile, checkForPeel = false) {
         if (tile != null) {
             this.occupied = true;
             this.containedTile = tile;
@@ -318,6 +428,9 @@ class GridTile {
 
             tile.grid = this.grid;
             tile.gridTileLocation = this;
+
+            if (checkForPeel)
+                peelCheck();
         }
     }
 

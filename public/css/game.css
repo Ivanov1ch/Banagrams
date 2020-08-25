@@ -1,0 +1,38 @@
+#canvas-container {
+    position: relative;
+}
+
+#canvas-container canvas {
+    display: block;
+    margin: 0 auto;
+}
+
+#dump-btn,
+#peel-btn {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+#dump-btn {
+    left: calc((100% - 900px) / 4);
+    transform: translateX(-50%);
+}
+
+#peel-btn {
+    right: calc((100% - 900px) / 4);
+    transform: translateX(50%);
+}
+
+main {
+    position: relative;
+    height: 100vh;
+}
+
+#game-section {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+}

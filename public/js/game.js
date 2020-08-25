@@ -1,13 +1,13 @@
 let gameDataJSON, dictionary, scrollUpInterval, scrollDownInterval, scrollLeftInterval, scrollRightInterval;
 let tileScrollUpInterval, tileScrollDownInterval, tileScrollLeftInterval, tileScrollRightInterval;
-let isValidatingCrossword = false; // When this is true, input will be disabled so the crossword doesn't change
+let paused = true;
 const canvasWidth = 900, canvasHeight = 900, tileWidth = 50, tileHeight = 50, gridMargin = 5, numRows = 50,
     numCols = 50, scrollLoopDelay = 125;
 const bunch = new Bunch(654321),
     grid = new Grid(canvasWidth, canvasHeight, tileWidth, tileHeight, gridMargin, numRows, numCols);
 
 // How many players are in the game, and the order in which the player draws (1 = draws first, numPlayers = draws last)
-const numPlayers = 4, playerOrder = 1;
+const numPlayers = 8, playerOrder = 1;
 
 function preload() {
     let currentURL = getURL();
@@ -24,8 +24,10 @@ function preload() {
             let type = request.getResponseHeader('Content-Type');
             if (type.indexOf("text") !== 1) {
                 dictionary = request.responseText.trim().split("\n");
-                for(let i = 0; i < dictionary.length; i++)
+                for (let i = 0; i < dictionary.length; i++)
                     dictionary[i] = dictionary[i].replace(/\W/g, '');
+
+                paused = false;
             }
         }
     }
@@ -45,7 +47,7 @@ function draw() {
 let processingKey = false;
 
 function keyPressed() {
-    if (!processingKey) {
+    if (!processingKey && !paused) {
         processingKey = true;
         if (key === 'w' && scrollUpInterval == null) {
             grid.scrollUp();
@@ -61,22 +63,20 @@ function keyPressed() {
             scrollRightInterval = setInterval(() => grid.scrollRight(), scrollLoopDelay);
         }
 
-        if (!isValidatingCrossword) {
-            // There needs to be tiles on the grid to move in the first place
-            if (grid.occupiedTiles.length !== 0) {
-                if (keyCode === LEFT_ARROW && tileScrollLeftInterval == null) {
-                    grid.scrollTilesLeft();
-                    tileScrollLeftInterval = setInterval(() => grid.scrollTilesLeft(), scrollLoopDelay);
-                } else if (keyCode === RIGHT_ARROW && tileScrollRightInterval == null) {
-                    grid.scrollTilesRight();
-                    tileScrollRightInterval = setInterval(() => grid.scrollTilesRight(), scrollLoopDelay);
-                } else if (keyCode === UP_ARROW) {
-                    grid.scrollTilesUp();
-                    tileScrollUpInterval = setInterval(() => grid.scrollTilesUp(), scrollLoopDelay);
-                } else if (keyCode === DOWN_ARROW) {
-                    grid.scrollTilesDown();
-                    tileScrollDownInterval = setInterval(() => grid.scrollTilesDown(), scrollLoopDelay);
-                }
+        // There needs to be tiles on the grid to move in the first place
+        if (grid.occupiedTiles.length !== 0) {
+            if (keyCode === LEFT_ARROW && tileScrollLeftInterval == null) {
+                grid.scrollTilesLeft();
+                tileScrollLeftInterval = setInterval(() => grid.scrollTilesLeft(), scrollLoopDelay);
+            } else if (keyCode === RIGHT_ARROW && tileScrollRightInterval == null) {
+                grid.scrollTilesRight();
+                tileScrollRightInterval = setInterval(() => grid.scrollTilesRight(), scrollLoopDelay);
+            } else if (keyCode === UP_ARROW) {
+                grid.scrollTilesUp();
+                tileScrollUpInterval = setInterval(() => grid.scrollTilesUp(), scrollLoopDelay);
+            } else if (keyCode === DOWN_ARROW) {
+                grid.scrollTilesDown();
+                tileScrollDownInterval = setInterval(() => grid.scrollTilesDown(), scrollLoopDelay);
             }
         }
 
@@ -116,7 +116,7 @@ function keyReleased() {
 }
 
 function mousePressed() {
-    if (!isValidatingCrossword)
+    if (!paused)
         grid.checkPressed();
 }
 
@@ -136,43 +136,52 @@ function startGame() {
     // Therefore we do not have to worry about startingTiles being null in this case
     let startingTiles = bunch.drawTilesAsGroup(numTilesToStartWith, playerOrder, numPlayers);
 
-    // Lay out the startingTiles into 3 roughly-even rows in the bottom the 3 rows of the initial grid view
-    let maxTilesPerRow = Math.ceil(startingTiles.length / 3);
-    let leftMargin = Math.floor(((canvasWidth / tileWidth) - maxTilesPerRow) / 2);
-    let numRows = Math.floor(canvasHeight / tileHeight);
+    // Lay out the startingTiles into rows of 5 near the bottom of the initial Grid view
+    let leftMargin = 2;
+    let numRows = Math.floor(canvasHeight / tileHeight), numCols = Math.floor(canvasWidth / tileWidth);
 
-    let startingRow = numRows + Math.abs(grid.translateX / grid.tileWidth) - 4;
+    let startingRow = numRows + Math.abs(grid.translateX / grid.tileWidth) - Math.floor(numRows / 2);
     let startingCol = leftMargin + Math.abs(grid.translateY / grid.tileHeight);
 
     let tileIndex = 0;
-    for (let row = startingRow; row < startingRow + 3; row++)
-        for (let col = startingCol; col < startingCol + maxTilesPerRow; col++) {
+    for (let row = startingRow; row < startingRow + numRows; row+= 2)
+        for (let col = startingCol; col < startingCol + numCols - leftMargin - 1; col+= 2) {
             if (tileIndex === startingTiles.length)
                 break;
 
             grid.tiles[col][row].setTile(startingTiles[tileIndex]);
             tileIndex++;
         }
+
+    $('#dump-btn button').attr('disabled', false);
+    paused = false;
 }
 
 function validateBoard() {
+    paused = true;
     if (dictionary !== undefined) {
         let words = findAllWords(grid);
 
-        if (words == null)
+        if (words == null) {
+            paused = false;
             return false;
+        }
 
         // Binary search each word's text in the array
         for (let i = 0; i < words.length; i++) {
             let word = words[i], wordText = word.text;
 
-            if(binarySearch(wordText) === -1)
+            if (binarySearch(wordText) === -1) {
+                paused = false;
                 return false;
+            }
         }
 
+        paused = false;
         return true;
     }
 
+    paused = false;
     return false;
 }
 
@@ -192,4 +201,32 @@ function binarySearch(word) {
     }
 
     return (dictionary[mid] === word) ? mid : -1;
+}
+
+function dump() {
+    console.log("Dump");
+}
+
+function peel() {
+    paused = true;
+    let tiles = bunch.drawTilesAsGroup(1, playerOrder, numPlayers);
+
+    if (tiles == null) {
+        console.log("No more peeling");
+        return;
+    }
+
+    grid.addTile(tiles[0]);
+    peelCheck();
+    paused = false;
+}
+
+// Checks if the grid is in a state that would allow peeling (valid crossword shape), and enables the button if so
+function peelCheck() {
+    paused = true;
+    if (isValidShape(grid.tiles))
+        $('#peel-btn button').attr('disabled', false);
+    else
+        $('#peel-btn button').attr('disabled', true);
+    paused = false;
 }
