@@ -4,4 +4,4 @@ class BananagramsConfig {
     }
 }
 
-module.exports = {config: new BananagramsConfig(3000)};
+module.exports = {config: new BananagramsConfig(8000)};

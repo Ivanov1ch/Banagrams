@@ -1,5 +1,6 @@
 let gameDataJSON, dictionary, scrollUpInterval, scrollDownInterval, scrollLeftInterval, scrollRightInterval;
 let tileScrollUpInterval, tileScrollDownInterval, tileScrollLeftInterval, tileScrollRightInterval;
+let socket;
 let paused = true;
 const canvasWidth = 900, canvasHeight = 900, tileWidth = 50, tileHeight = 50, gridMargin = 5, numRows = 50,
     numCols = 50, scrollLoopDelay = 125;
@@ -7,7 +8,7 @@ const bunch = new Bunch(654321),
     grid = new Grid(canvasWidth, canvasHeight, tileWidth, tileHeight, gridMargin, numRows, numCols);
 
 // How many players are in the game, and the order in which the player draws (1 = draws first, numPlayers = draws last)
-const numPlayers = 8, playerOrder = 1;
+const numPlayers = 4, playerOrder = 1;
 
 function preload() {
     let currentURL = getURL();
@@ -31,10 +32,13 @@ function preload() {
             }
         }
     }
+
+    socket = io.connect('http://localhost:8000');
 }
 
+
 function setup() {
-    createCanvas(canvasWidth, canvasHeight);
+    createCanvas(canvasWidth, canvasHeight)
     bunch.setupTiles(gameDataJSON.letters);
 }
 
