@@ -3,6 +3,15 @@
     margin-right: 6px;
 }
 
+li.me {
+    font-weight: bold;
+}
+
+li.me:after {
+    content: ' (Me)';
+    font-weight: normal;
+}
+
 /* Add an animated ellipsis to the li of each player currently entering their name */
 .waiting:after {
     overflow: hidden;

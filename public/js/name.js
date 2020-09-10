@@ -20,7 +20,8 @@ else
 function submitForm() {
     let name = $('#name').val();
 
-    if (name.length > 0)
+    // The length of the name, without whitespace, must be greater than 0
+    if (name.replace(/\s+/g, '').length > 0)
         socket.emit('setName', name, (response) => {
             if (response === 'done')
                 window.location.href = '/lobby'

@@ -1,18 +1,21 @@
 const socket = io.connect('http://localhost:8000');
+let isHost = false, timerInterval;
 
 if (window.localStorage.getItem('playerID') === null)
     window.location.href = '/';
 else {
-    function fillPlayerList(playerData, readyToStart) {
+    const fillPlayerList = (playerData, readyToStart) => {
         const list = $('#player-list');
         list.empty();
 
         for (let index = 0; index < playerData.length; index++) {
+            let isMe = window.localStorage.getItem('playerID') === playerData[index][0];
             if (index === 0) {
-                list.append(`<li class="${playerData[index][2] ? '' : 'waiting'}"><span id="host-icon"><i class="fas fa-crown"></i></span>${playerData[index][1]} (Host)</li>`);
+                list.append(`<li class="${playerData[index][2] ? '' : 'waiting'} ${isMe ? 'me' : ''}"><span id="host-icon" title="Lobby Host"><i class="fas fa-crown"></i></span>${playerData[index][1]}</li>`);
 
                 // Are we the host?
-                if (window.localStorage.getItem('playerID') === playerData[index][0]) {
+                if (isMe) {
+                    isHost = true;
                     let startButton = $('#start-button'), reasonForDisable = $('#reason-for-disable');
                     startButton.show();
 
@@ -29,7 +32,7 @@ else {
                         reasonForDisable.hide();
                 }
             } else
-                list.append(`<li class="${playerData[index][2] ? '' : 'waiting'}">${playerData[index][1]}</li>`);
+                list.append(`<li class="${playerData[index][2] ? '' : 'waiting'} ${isMe ? 'me' : ''}">${playerData[index][1]}</li>`);
         }
     }
 
@@ -59,13 +62,31 @@ else {
     socket.on('refreshNameList', (returnData) => {
         fillPlayerList(returnData[0], returnData[1]);
     });
+
+    socket.on('beginCountdown', () => {
+        startCountdown();
+    });
+
+    socket.on('countdownCanceled', () => {
+        clearInterval(timerInterval);
+        $('#countdown-timer').hide();
+    });
+
+    socket.on('countdownFinished', () => {
+        window.onbeforeunload = null;
+        window.location.href = '/game';
+    })
 }
 
-const startGame = function () {
-    socket.emit('startGame', window.localStorage.getItem('playerID'), (response) => {
-        console.log(response);
+const startGame = () => {
+    socket.emit('checkIfReadyToStart', window.localStorage.getItem('playerID'), (response) => {
+        if (response === 'ready') {
+            socket.emit('startCountdown', (response2) => {
+                if (response2 === 'done')
+                    startCountdown();
+            })
 
-        if(response === 'thisID') {
+        } else if (response === 'thisID') {
             alert('Sorry, but your playerID has been modified and is now invalid! Please rejoin the game.');
             // Disable the "Are you sure you want to leave?" box
             window.onbeforeunload = null;
@@ -74,3 +95,38 @@ const startGame = function () {
         }
     });
 }
+
+const startCountdown = () => {
+    $('#countdown-timer p span').html(5);
+    $('#countdown-timer').show();
+    $('#countdown-timer button').hide();
+
+    if (isHost) {
+        function cancelCountdown() {
+            clearInterval(timerInterval);
+            $('#countdown-timer').hide();
+
+            socket.emit('cancelCountdown', (response) => {
+                console.log(response);
+            });
+        }
+
+        $('#countdown-timer button').show();
+        $('#countdown-timer button').bind('click', cancelCountdown);
+    }
+    let timesLooped = 0;
+    timerInterval = setInterval(() => {
+        timesLooped++;
+        if (timesLooped > 5) {
+            clearInterval(timerInterval);
+
+            socket.emit('reportCountdownCompletion', (response) => {
+                console.log(response);
+            });
+
+        } else
+            $('#countdown-timer p span').html(5 - timesLooped);
+    }, 1000);
+}
+
+
