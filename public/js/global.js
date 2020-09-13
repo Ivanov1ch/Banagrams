@@ -12,3 +12,9 @@ function getUrlParameter(sParam) {
         }
     }
 }
+
+
+const alertAndRedirect = (message, location) => {
+    alert(message);
+    window.location.href = location;
+}

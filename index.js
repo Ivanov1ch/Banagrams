@@ -27,6 +27,8 @@ function joinLobby(socket, lobby) {
     socket.join(lobby.id, () => {
         players[socket.playerID].lobbyID = lobby.id;
         socket.to(lobby.id).emit('refreshNameList', getLobbyPlayers(lobby.id));
+        // Cancel countdown
+        io.to(players[socket.playerID].lobbyID).emit('countdownCanceled');
         io.to('Waiting Room').emit('refreshLobbyList', getLobbyList());
     });
 }
@@ -44,6 +46,10 @@ function leaveLobby(socket) {
             socket.leave(id);
             players[playerID].lobbyID = undefined;
             players[playerID].name = undefined;
+
+            if (lobby.gameHasStarted) {
+                // TODO: Inform other players when an opponent leaves, disbanding if needed
+            }
         }
 
         // Should this lobby be deleted (is it empty?)
@@ -120,8 +126,8 @@ function getLobbyList() {
             size: lobby.size
         };
 
-        // Don't show full lobbies or empty lobbies
-        if (lobbyData.players !== lobbyData.size && lobbyData.players > 0)
+        // Don't show full lobbies, empty lobbies, or lobbies that have already started
+        if (!lobby.lobbyHasStarted && lobbyData.players !== lobbyData.size && lobbyData.players > 0)
             returnData.push(lobbyData);
     }
 
@@ -185,6 +191,12 @@ function isHost(playerID) {
     let lobby = lobbies[players[playerID].lobbyID];
 
     return lobby.playerIDs.indexOf(playerID) === 0;
+}
+
+function getHost(socket) {
+    let lobby = lobbies[players[socket.playerID].lobbyID];
+
+    return lobby.playerIDs[0];
 }
 
 function lobbyIsReady(lobby) {
@@ -375,6 +387,8 @@ io.sockets.on('connection', (socket) => {
         // Is this person the host and in a lobby?
         if (inLobby(socket))
             if (isHost(socket.playerID)) {
+                lobbies[players[socket.playerID].lobbyID].lobbyHasStarted = true;
+                io.to('Waiting Room').emit('refreshLobbyList', getLobbyList());
                 io.to(players[socket.playerID].lobbyID).emit('countdownFinished');
                 callback('done');
             } else
@@ -385,6 +399,89 @@ io.sockets.on('connection', (socket) => {
 
     socket.on('getLobbyPlayers', (callback) => {
         callback(getLobbyPlayers(players[socket.playerID].lobbyID));
+    });
+
+    socket.on('lobbyHasStarted', (callback) => {
+        if (isValidPlayerID(socket.playerID))
+            if (inLobby(socket))
+                callback(lobbies[players[socket.playerID].lobbyID].lobbyHasStarted);
+
+        callback(false);
+    });
+
+    socket.on('gameHasStarted', (callback) => {
+        if (isValidPlayerID(socket.playerID))
+            if (inLobby(socket))
+                callback(lobbies[players[socket.playerID].lobbyID].gameHasStarted);
+
+        callback(false);
+    });
+
+    socket.on('checkHost', (callback) => {
+        if (isValidPlayerID(socket.playerID))
+            if (inLobby(socket))
+                if (isHost(socket.playerID))
+                    callback(true);
+
+        callback(false);
+    });
+
+    socket.on('getGameData', (callback) => {
+        if (isValidPlayerID(socket.playerID))
+            if (inLobby(socket)) {
+                let lobby = lobbies[players[socket.playerID].lobbyID];
+                if (lobby.lobbyHasStarted) {
+                    let gameData = {
+                        'bunchSeed': lobby.bunchSeed,
+                        'numPlayers': lobby.playerIDs.length,
+                        'playerOrder': lobby.playerIDs.indexOf(socket.playerID) + 1
+                    };
+
+                    callback(gameData);
+                } else
+                    callback('notStarted');
+            } else
+                callback('notInLobby');
+        else
+            callback('thisID');
+    });
+
+    socket.on('readyToPlay', (callback) => {
+        if (isValidPlayerID(socket.playerID))
+            if (inLobby(socket)) {
+                let lobby = lobbies[players[socket.playerID].lobbyID];
+                if (lobby.lobbyHasStarted && !lobby.readyToPlay.includes(socket.playerID)) {
+                    lobby.readyToPlay.push(socket.playerID);
+
+                    if (lobby.readyToPlay.length === lobby.playerIDs.length) {
+                        // Everyone is ready, inform the host client
+                        let hostID = getHost(socket);
+                        io.to(players[hostID].socket.id).emit('allReady');
+                    }
+                    callback('done');
+                } else
+                    callback('notStarted');
+            } else
+                callback('notInLobby');
+        else
+            callback('thisID');
+
+    });
+
+    socket.on('beginGameCountdown', () => {
+        if (isValidPlayerID(socket.playerID))
+            if (inLobby(socket))
+                if (isHost(socket.playerID)) {
+                    let lobby = lobbies[players[socket.playerID].lobbyID];
+
+                    // 5 second countdown timer will begin, update the variable in slightly more than 5 seconds to account for ping
+                    setTimeout(() => {
+                        lobby.gameHasStarted = true;
+                        io.to(lobby.id).emit('startGame');
+                    }, 5250);
+
+                    io.to(lobby.id).emit('beginCountdown');
+                }
     });
 
     socket.on('disconnect', () => {

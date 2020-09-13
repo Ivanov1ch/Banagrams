@@ -11,7 +11,7 @@ else {
         for (let index = 0; index < playerData.length; index++) {
             let isMe = window.localStorage.getItem('playerID') === playerData[index][0];
             if (index === 0) {
-                list.append(`<li class="${playerData[index][2] ? '' : 'waiting'} ${isMe ? 'me' : ''}"><span id="host-icon" title="Lobby Host"><i class="fas fa-crown"></i></span>${playerData[index][1]}</li>`);
+                list.append(`<li class="${playerData[index][2] ? '' : 'loading-ellipsis'} ${isMe ? 'me' : ''}"><span id="host-icon" title="Lobby Host"><i class="fas fa-crown"></i></span>${playerData[index][1]}</li>`);
 
                 // Are we the host?
                 if (isMe) {
@@ -32,7 +32,7 @@ else {
                         reasonForDisable.hide();
                 }
             } else
-                list.append(`<li class="${playerData[index][2] ? '' : 'waiting'} ${isMe ? 'me' : ''}">${playerData[index][1]}</li>`);
+                list.append(`<li class="${playerData[index][2] ? '' : 'loading-ellipsis'} ${isMe ? 'me' : ''}">${playerData[index][1]}</li>`);
         }
     }
 
@@ -73,8 +73,33 @@ else {
     });
 
     socket.on('countdownFinished', () => {
-        window.onbeforeunload = null;
-        window.location.href = '/game';
+        // Extract game data for this player and save it in localStorage
+        socket.emit('getGameData', (returnData) => {
+            window.onbeforeunload = null;
+
+            if (typeof returnData === 'object') {
+                let numPlayers = returnData.numPlayers;
+                let playerOrder = returnData.playerOrder;
+                let bunchSeed = returnData.bunchSeed;
+
+                window.localStorage.setItem('numPlayers', numPlayers);
+                window.localStorage.setItem('playerOrder', playerOrder);
+                window.localStorage.setItem('bunchSeed', bunchSeed);
+
+                window.location.href = '/game';
+            } else {
+                if (returnData === 'notStarted') {
+                    // Game has not started, do nothing
+                } else if (returnData === 'notInLobby')
+                    alertAndRedirect('Sorry, but you are not in a lobby! Why not join one?', '/join')
+                else {
+                    window.localStorage.clear();
+                    alertAndRedirect('Sorry, but there was a problem with your player ID!', '/')
+                }
+            }
+
+        });
+
     })
 }
 

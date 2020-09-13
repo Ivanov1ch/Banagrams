@@ -1,14 +1,16 @@
 let gameDataJSON, dictionary, scrollUpInterval, scrollDownInterval, scrollLeftInterval, scrollRightInterval;
 let tileScrollUpInterval, tileScrollDownInterval, tileScrollLeftInterval, tileScrollRightInterval;
-let socket;
 let paused = true;
 const canvasWidth = 900, canvasHeight = 900, tileWidth = 50, tileHeight = 50, gridMargin = 5, numRows = 50,
     numCols = 50, scrollLoopDelay = 125;
-const bunch = new Bunch(654321),
-    grid = new Grid(canvasWidth, canvasHeight, tileWidth, tileHeight, gridMargin, numRows, numCols);
+const grid = new Grid(canvasWidth, canvasHeight, tileWidth, tileHeight, gridMargin, numRows, numCols);
 
+const bunch = new Bunch(window.localStorage.getItem('bunchSeed'));
 // How many players are in the game, and the order in which the player draws (1 = draws first, numPlayers = draws last)
-const numPlayers = 4, playerOrder = 1;
+const numPlayers = window.localStorage.getItem('numPlayers'), playerOrder = window.localStorage.getItem('playerOrder');
+
+const socket = io.connect('http://localhost:8000');
+let isHost = null; // Will be set (to true/false) by interactions.js upon its completion of player data validation
 
 function preload() {
     let currentURL = getURL();
@@ -32,8 +34,6 @@ function preload() {
             }
         }
     }
-
-    socket = io.connect('http://localhost:8000');
 }
 
 
@@ -148,8 +148,8 @@ function startGame() {
     let startingCol = leftMargin + Math.abs(grid.translateY / grid.tileHeight);
 
     let tileIndex = 0;
-    for (let row = startingRow; row < startingRow + numRows; row+= 2)
-        for (let col = startingCol; col < startingCol + numCols - leftMargin - 1; col+= 2) {
+    for (let row = startingRow; row < startingRow + numRows; row += 2)
+        for (let col = startingCol; col < startingCol + numCols - leftMargin - 1; col += 2) {
             if (tileIndex === startingTiles.length)
                 break;
 

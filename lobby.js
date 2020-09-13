@@ -9,6 +9,13 @@ class Lobby {
         // Generate a random number between 10^5 and 10^8 to serve as the seed for all the seeded RNG generators that shuffle the bunches
         this.bunchSeed = Math.floor(Math.random() * (Math.pow(10, 8) - Math.pow(10, 5) + 1)) + Math.pow(10, 5);
         this.size = size;
+
+        // What is the difference?
+        // lobbyHasStarted = the start button has been pressed on /lobby and the countdown has ended -> players redirected to /game
+        // gameHasStarted = the /game page has been loaded, all players are ready to play (and are in this.readyToPlay),
+        // and startGame() has been called. From this point on all refreshes of the page and such will result in a kick from the lobby.
+        this.lobbyHasStarted = false;
+        this.gameHasStarted = false;
     }
 }
 
