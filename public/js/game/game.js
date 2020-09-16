@@ -1,8 +1,8 @@
 let gameDataJSON, dictionary, scrollUpInterval, scrollDownInterval, scrollLeftInterval, scrollRightInterval;
 let tileScrollUpInterval, tileScrollDownInterval, tileScrollLeftInterval, tileScrollRightInterval;
 let paused = true;
-const canvasWidth = 900, canvasHeight = 900, tileWidth = 50, tileHeight = 50, gridMargin = 5, numRows = 50,
-    numCols = 50, scrollLoopDelay = 125;
+const canvasWidth = 900, canvasHeight = 900, tileWidth = 50, tileHeight = 50, gridMargin = 5, numRows = 30,
+    numCols = 30, scrollLoopDelay = 125;
 const grid = new Grid(canvasWidth, canvasHeight, tileWidth, tileHeight, gridMargin, numRows, numCols);
 
 const bunch = new Bunch(window.localStorage.getItem('bunchSeed'));
@@ -83,6 +83,18 @@ function keyPressed() {
                 tileScrollDownInterval = setInterval(() => grid.scrollTilesDown(), scrollLoopDelay);
             }
         }
+
+        // Check enter press (enter -> peel)
+        if(keyCode === ENTER)
+            // Is it even a valid time to peel()? The button is enabled when we can peel so check that (fine because peel() validates shape regardless)
+            if(!$('#peel-btn button').prop('disabled'))
+                peel();
+
+        // Check backspace press (backspace -> dump)
+        if(keyCode === BACKSPACE)
+            // Is it even a valid time to dump()? The button is enabled when we can dump so check that
+            if(!$('#dump-btn button').prop('disabled'))
+                dump();
 
         processingKey = false;
     }
@@ -213,16 +225,26 @@ function dump() {
 
 function peel() {
     paused = true;
-    let tiles = bunch.drawTilesAsGroup(1, playerOrder, numPlayers);
+    if (isValidShape(grid.tiles)) {
+        let tile = bunch.drawTilesAsGroup(1, playerOrder, numPlayers);
 
-    if (tiles == null) {
-        console.log("No more peeling");
-        return;
-    }
+        if (tile == null) {
+            socket.emit('attemptVictory', grid.occupiedTiles.length, bunch.tiles.length, (response) => {
+                console.log(response);
+            });
+            return;
+        }
 
-    grid.addTile(tiles[0]);
-    peelCheck();
-    paused = false;
+        socket.emit('attemptPeel', grid.occupiedTiles.length, bunch.tiles.length, (response) => {
+            if (response === 'done') {
+                grid.addTile(tile[0]);
+                $('#peel-btn button').attr('disabled', true);
+                paused = false;
+            } else {
+                console.log(response);
+            }
+        });
+    } else paused = false;
 }
 
 // Checks if the grid is in a state that would allow peeling (valid crossword shape), and enables the button if so
@@ -234,3 +256,7 @@ function peelCheck() {
         $('#peel-btn button').attr('disabled', true);
     paused = false;
 }
+
+socket.on('peel', (playerName) => {
+    grid.addTile(bunch.drawTilesAsGroup(1, playerOrder, numPlayers)[0]);
+});

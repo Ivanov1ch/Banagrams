@@ -40,16 +40,12 @@ else {
 
     socket.on('allReady', () => {
         if (isHost) {
-            console.log('Hi');
             socket.emit('beginGameCountdown');
         }
     });
 
     socket.on('beginCountdown', () => {
-        $('#overlay-content').children().each((index, element) => {
-            $(element).hide();
-        });
-
+        $('.overlay-title').first().hide();
         $('#countdown').html('5');
         $('#countdown').show();
 
@@ -67,6 +63,11 @@ else {
         hideOverlay();
         startGame();
         $('canvas').show();
+    });
+
+    socket.on('mismatchFound', (playerName) => {
+        window.onbeforeunload = null;
+        alertAndRedirect(`Sorry, but ${playerName}'s bunch has been altered! The lobby is now closing...`, '/')
     });
 
     $(document).ready(() => {
@@ -93,6 +94,11 @@ else {
             }
         }, 100);
     });
+
+    socket.on('win', (winnerID, winnerName) => {
+        window.onbeforeunload = null;
+        alertAndRedirect(winnerID === window.localStorage.getItem('playerID') ? 'You won!' : `${winnerName} won!`, '/')
+    })
 
     const hideOverlay = () => {
         $('#overlay').hide();

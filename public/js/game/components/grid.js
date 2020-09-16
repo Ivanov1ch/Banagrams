@@ -358,19 +358,22 @@ class Grid {
             // Check all locations 2 tiles away from this tile
             for (let r = row - 2; r <= row + 2; r += 2) {
                 for (let c = col - 2; c <= col + 2; c += 2) {
-                    let potentialLocation = this.tiles[r][c];
-                    let validLocation = true;
-                    // Check if there is a 1-block empty circle around potentialLocation
-                    for (let r2 = r - 1; r2 <= r + 1; r2++) {
-                        for (let c2 = c - 1; c2 <= c + 1; c2++) {
-                            if (this.tiles[r2][c2].occupied)
-                                validLocation = false;
+                    if (r >= 0 && r < this.numRows && c >= 0 && c < this.numRows) {
+                        let potentialLocation = this.tiles[r][c];
+                        let validLocation = true;
+                        // Check if there is a 1-block empty circle around potentialLocation
+                        for (let r2 = r - 1; r2 <= r + 1; r2++) {
+                            for (let c2 = c - 1; c2 <= c + 1; c2++) {
+                                if (r2 >= 0 && r2 < this.numRows && c2 >= 0 && c2 < this.numRows)
+                                    if (this.tiles[r2][c2].occupied)
+                                        validLocation = false;
+                            }
                         }
-                    }
 
-                    if (validLocation) {
-                        finalLocation = potentialLocation;
-                        break;
+                        if (validLocation) {
+                            finalLocation = potentialLocation;
+                            break;
+                        }
                     }
                 }
 

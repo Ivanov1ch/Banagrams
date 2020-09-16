@@ -4,6 +4,13 @@ const applyRoutes = require('./routes');
 const express = require('express');
 const socket = require('socket.io');
 const {v1: uuid} = require('uuid');
+const fs = require('fs');
+const gameDataJSON = JSON.parse(fs.readFileSync('public/data/game_data.json'));
+
+let bunchSize = 0;
+
+for (let key in gameDataJSON.letters)
+    bunchSize += gameDataJSON.letters[key];
 
 const app = express();
 const port = config.config.port;
@@ -211,6 +218,49 @@ function lobbyIsReady(lobby) {
     }
 
     return false;
+}
+
+function validateBunchIntegrity(socket, occupiedTilesLength, bunchLength, callback) {
+    if (isValidPlayerID(socket.playerID))
+        if (inLobby(socket)) {
+            let lobby = lobbies[players[socket.playerID].lobbyID];
+            if (lobby.gameHasStarted) {
+                let numDumps = lobby.numDumps[socket.playerID];
+
+                // How many tiles should this player have?
+                let tilesPossessed = lobby.startingTiles + lobby.numPeels + numDumps * 3;
+
+                // How many tiles should be left in the bunch? A more complicated question
+                let tilesLeftInBunch = bunchSize, numPlayers = lobby.readyToPlay.length;
+                tilesLeftInBunch -= numPlayers * lobby.startingTiles; // Starting tiles
+                // Peeled tiles (+ 1 because drawTilesAsGroup is called before this message is received).
+                tilesLeftInBunch -= numPlayers * (lobby.numPeels + 1);
+
+                // Subtract all tiles dumped by each player
+                for (let playerID in lobby.numDumps)
+                    tilesLeftInBunch -= 3 * lobby.numDumps[playerID];
+
+                if(tilesLeftInBunch < 0)
+                    tilesLeftInBunch += numPlayers; // There were not enough for the last peel, so this is the win check (undoes the numPeels + 1)
+
+                // Do these numbers match up?
+                if (tilesPossessed === occupiedTilesLength && tilesLeftInBunch === bunchLength) {
+                    return true;
+                } else {
+                    return false;
+                }
+            } else {
+                callback('notStarted');
+                return null;
+            }
+        } else {
+            callback('notInLobby');
+            return null;
+        }
+    else {
+        callback('thisID');
+        return null;
+    }
 }
 
 io.sockets.on('connection', (socket) => {
@@ -473,16 +523,52 @@ io.sockets.on('connection', (socket) => {
             if (inLobby(socket))
                 if (isHost(socket.playerID)) {
                     let lobby = lobbies[players[socket.playerID].lobbyID];
+                    if (lobby.readyToPlay.length === lobby.playerIDs.length) {
+                        // 5 second countdown timer will begin, then the properties of the Lobby essential to validation will be initialized
+                        setTimeout(() => {
+                            lobby.gameHasStarted = true;
+                            lobby.startingTiles = gameDataJSON.starting_tiles[lobby.readyToPlay.length.toString()];
+                            lobby.numPeels = 0;
 
-                    // 5 second countdown timer will begin, update the variable in slightly more than 5 seconds to account for ping
-                    setTimeout(() => {
-                        lobby.gameHasStarted = true;
-                        io.to(lobby.id).emit('startGame');
-                    }, 5250);
+                            for (let index = 0; index < lobby.readyToPlay.length; index++) {
+                                let playerID = lobby.readyToPlay[index];
+                                lobby.numDumps[playerID] = 0;
+                            }
 
-                    io.to(lobby.id).emit('beginCountdown');
+                            io.to(lobby.id).emit('startGame');
+                        }, 5000);
+
+                        io.to(lobby.id).emit('beginCountdown');
+                    }
                 }
     });
+
+    socket.on('attemptPeel', (occupiedTilesLength, bunchLength, callback) => {
+        let canPeel = validateBunchIntegrity(socket, occupiedTilesLength, bunchLength, callback);
+
+        if (canPeel !== null) {
+            let lobby = lobbies[players[socket.playerID].lobbyID];
+            if (canPeel) {
+                lobby.numPeels += 1;
+                socket.to(lobby.id).emit('peel', players[socket.playerID].name);
+                callback('done');
+            } else
+                io.to(lobby.id).emit('mismatchFound', players[socket.playerID].name);
+        }
+    });
+
+    socket.on('attemptVictory', (occupiedTilesLength, bunchLength, callback) => {
+        let canWin = validateBunchIntegrity(socket, occupiedTilesLength, bunchLength, callback);
+
+        if (canWin !== null) {
+            let lobby = lobbies[players[socket.playerID].lobbyID];
+
+            if (canWin) {
+                io.to(lobby.id).emit('win', socket.playerID, players[socket.playerID].name);
+            } else
+                io.to(lobby.id).emit('mismatchFound', players[socket.playerID].name);
+        }
+    })
 
     socket.on('disconnect', () => {
         if (socket.playerID !== undefined) {
