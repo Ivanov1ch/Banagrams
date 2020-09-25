@@ -6,7 +6,7 @@
     -webkit-animation: ellipsis steps(4,end) 2000ms infinite;
     animation: ellipsis steps(4,end) 2000ms infinite;
     content: "\2026"; /* ascii code for the ellipsis character */
-    width: 0px;
+    width: 0;
 }
 
 @keyframes ellipsis {
@@ -19,4 +19,40 @@
     to {
         width: 20px;
     }
+}
+
+.underline {
+    text-decoration: underline;
+}
+
+.sidenav-overlay {
+    cursor: pointer;
+}
+
+/* Form elements */
+i.waves-effect.green.btn-large input {
+    color: white;
+}
+
+input[type=range]::-webkit-slider-thumb {
+    background-color: #4CAF50 !important;
+}
+input[type=range]::-moz-range-thumb {
+    background-color: #4CAF50 !important;
+}
+input[type=range]::-ms-thumb {
+    background-color: #4CAF50 !important;
+}
+
+input[type=text]:focus {
+    border-color: #4CAF50 !important;
+    box-shadow: 0 1px 0 0 #4CAF50 !important;
+}
+
+input[type=text]:focus+label {
+    color: #4CAF50 !important;
+}
+
+span.thumb {
+    background-color: #4CAF50 !important;
 }

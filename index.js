@@ -155,9 +155,10 @@ function leaveWaitingList(socket) {
 }
 
 function deletePlayerIDAfterDisconnect(socket) {
-    players[socket.playerID].playerRemovalTimeout = setTimeout(() => {
-        delete players[socket.playerID];
-    }, 7500);
+    if (players[socket.playerID] !== undefined)
+        players[socket.playerID].playerRemovalTimeout = setTimeout(() => {
+            delete players[socket.playerID];
+        }, 7500);
 }
 
 // Return format: [[[player ID, player name, playerHasChosenName], [player ID, player name, playerHasChosenName], etc.], readyToStart]
@@ -240,7 +241,7 @@ function validateBunchIntegrity(socket, occupiedTilesLength, bunchLength, callba
                 for (let playerID in lobby.numDumps)
                     tilesLeftInBunch -= 3 * lobby.numDumps[playerID];
 
-                if(tilesLeftInBunch < 0)
+                if (tilesLeftInBunch < 0)
                     tilesLeftInBunch += numPlayers; // There were not enough for the last peel, so this is the win check (undoes the numPeels + 1)
 
                 // Do these numbers match up?
@@ -447,8 +448,9 @@ io.sockets.on('connection', (socket) => {
             callback('notInLobby');
     });
 
-    socket.on('getLobbyPlayers', (callback) => {
-        callback(getLobbyPlayers(players[socket.playerID].lobbyID));
+    socket.on('getLobbyData', (callback) => {
+        let lobbyID = players[socket.playerID].lobbyID;
+        callback(getLobbyPlayers(lobbyID), lobbies[lobbyID].name);
     });
 
     socket.on('lobbyHasStarted', (callback) => {

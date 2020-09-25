@@ -1,6 +1,7 @@
 function applyRoutes(app) {
     let basicRoutes = [['/', '/index.html'], ['/create', '/create.html'], ['/browse', '/browse.html'],
-        ['/game', '/game.html'], ['/error', '/error.html'], ['/lobby', '/lobby.html'], ['/name', '/name.html']];
+        ['/game', '/game.html'], ['/error', '/error.html'], ['/lobby', '/lobby.html'], ['/name', '/name.html'],
+        ['/howto', '/howto.html']];
 
     basicRoutes.forEach((routeData) => {
         app.get(routeData[0], (req, res) => {

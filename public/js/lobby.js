@@ -51,8 +51,9 @@ else {
                     };
 
                     // Populate player names
-                    socket.emit('getLobbyPlayers', (returnData) => {
-                        fillPlayerList(returnData[0], returnData[1]);
+                    socket.emit('getLobbyData', (playerNameData, lobbyName) => {
+                        $('#lobby-title').html(lobbyName);
+                        fillPlayerList(playerNameData[0], playerNameData[1]);
                     });
                 }
             });
@@ -125,11 +126,13 @@ const startCountdown = () => {
     $('#countdown-timer p span').html(5);
     $('#countdown-timer').show();
     $('#countdown-timer button').hide();
+    $('#start-button').hide();
 
     if (isHost) {
         function cancelCountdown() {
             clearInterval(timerInterval);
             $('#countdown-timer').hide();
+            $('#start-button').show();
 
             socket.emit('cancelCountdown', (response) => {
                 console.log(response);

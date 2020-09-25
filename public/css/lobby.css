@@ -11,3 +11,7 @@ li.me:after {
     content: ' (Me)';
     font-weight: normal;
 }
+
+#player-list li {
+    margin: 5px 0;
+}
